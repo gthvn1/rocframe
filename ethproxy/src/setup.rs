@@ -3,6 +3,7 @@ use std::process::Command;
 pub struct Veth {
     name: String,
     peer: String,
+    cidr: String,
 }
 
 /// Runs a command with the given arguments and checks its exit code.
@@ -44,11 +45,12 @@ fn run_cmd(cmd: &str, args: &[&str], expected: i32) -> Result<(), String> {
 }
 
 impl Veth {
-    pub fn init(name: &str) -> Self {
+    pub fn init(name: &str, cidr: &str) -> Self {
         let peer = format!("{}-peer", name);
         Self {
             name: name.to_string(),
             peer,
+            cidr: cidr.to_string(),
         }
     }
 
@@ -67,8 +69,8 @@ impl Veth {
                 0, "Create veth pair",
                 vec!["link", "add", &self.name, "type", "veth", "peer", "name", &self.peer,]),
             (
-                0, "Set IP address",
-                vec!["addr", "add", "192.168.35.1/24", "dev", &self.name]),
+                0, "Set IPv4 address",
+                vec!["addr", "add", &self.cidr, "dev", &self.name]),
             (
                 0, "Bring main link up",
                 vec!["link", "set", &self.name, "up"]),
@@ -80,5 +82,9 @@ impl Veth {
         for (expected, description, args) in commands {
             run_cmd("ip", &args, expected).unwrap_or_else(|e| panic!("{description}: {e}"))
         }
+    }
+
+    pub fn destroy_device(&self) {
+        let _ = run_cmd("ip", &["link", "del", &self.name], 0);
     }
 }
