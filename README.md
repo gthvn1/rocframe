@@ -6,8 +6,8 @@
 
 This repository contains two components:
 
-- frameforge — OCaml server (built with Dune)
-- ethproxy — Rust client (built with Cargo)
+- **frameforge** — OCaml server (built with Dune)
+- **ethproxy** — Rust client (built with Cargo)
 
 Both are independent programs but live in the same project directory.
 
