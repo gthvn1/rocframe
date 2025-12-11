@@ -44,7 +44,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     print!("> ");
     io::stdout().flush()?;
 
-    'outer: while keep_looping.load(atomic::Ordering::SeqCst) {
+    while keep_looping.load(atomic::Ordering::SeqCst) {
         // Currently we just have stdin but we will add the Veth socket
         let mut pollfds = [PollFd::new(stdin_fd, PollFlags::POLLIN)];
 
@@ -52,20 +52,18 @@ fn main() -> Result<(), Box<dyn Error>> {
         //  | thread 'main' (60079) panicked at src/main.rs:41:68:
         //  | called `Result::unwrap()` on an `Err` value: EINTR
         //  | note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
-        loop {
-            match poll(&mut pollfds, PollTimeout::from(100u16)) {
-                Ok(0) => continue 'outer, // We could also break because we test what happens later
-                Ok(_) => break,
-                Err(nix::errno::Errno::EINTR) => {
-                    // poll() returns EINTR for any signal, not just SIGINT so we need to check
-                    if !keep_looping.load(atomic::Ordering::SeqCst) {
-                        break 'outer;
-                    }
-                    continue 'outer;
+        match poll(&mut pollfds, PollTimeout::from(100u16)) {
+            Ok(0) => continue,
+            Ok(_) => {} // nothing to do, fds are checked right after the match
+            Err(nix::errno::Errno::EINTR) => {
+                // poll() returns EINTR for any signal, not just SIGINT so we need to check
+                if keep_looping.load(atomic::Ordering::SeqCst) {
+                    // It wasn't SIGINT (otherwise keep_looping is false) so keep looping
+                    continue;
                 }
-                // and we will quit
-                Err(e) => panic!("poll failed: {}", e),
+                break;
             }
+            Err(e) => panic!("poll failed: {}", e),
         }
 
         if pollfds[0]
@@ -73,9 +71,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             .is_some_and(|f| f.contains(PollFlags::POLLIN))
         {
             let mut input = String::new();
-            io::stdin()
-                .read_line(&mut input)
-                .expect("Failed to read line");
+            io::stdin().read_line(&mut input)?;
 
             print!("Sending {input}");
 
