@@ -42,7 +42,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("Ctrl-C to quit");
 
     print!("> ");
-    io::stdout().flush().unwrap();
+    io::stdout().flush()?;
 
     'outer: while keep_looping.load(atomic::Ordering::SeqCst) {
         // Currently we just have stdin but we will add the Veth socket
@@ -83,7 +83,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             print!("Received: {response}");
 
             print!("> ");
-            io::stdout().flush().unwrap();
+            io::stdout().flush()?;
         }
     }
 
