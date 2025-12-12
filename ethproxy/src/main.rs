@@ -10,13 +10,13 @@ use nix::poll::{PollFd, PollFlags, PollTimeout, poll};
 
 //static VETHNAME: &str = "veth0";
 //static VETHIP: &str = "192.168.35.1/24";
-static SERVERPATH: &str = "/tmp/frameforge.sock";
+const SERVER_PATH: &str = "/tmp/frameforge.sock";
 
 enum PollAction {
-    ReachTimeout,
-    ReadStdin,
-    GotSignal,
-    Continue,
+    TimedOut,
+    StdinReady,
+    Interrupted,
+    Ignore,
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -39,12 +39,16 @@ fn main() -> Result<(), Box<dyn Error>> {
         .expect("Error setting Ctrl-C handler");
     }
 
-    // We declare the fd here to live during the whole loop
+    // We declare the fd here to live during the whole loop. It is a little
+    // bit strange but I need to first declare the binding (io::stding() returns
+    // a temporary), and then borrow it to stdin_fd. Then binding is dropped but
+    // it is ok now to use stdin_fd. If we don't do that when using stdin_fd we
+    // have an issue "temporary value dropped while borrowed".
     let binding = io::stdin();
     let stdin_fd = binding.as_fd();
 
     // Connect to server so we will be able to send data
-    let mut frameforge_sock = UnixStream::connect(SERVERPATH)?;
+    let mut frameforge_sock = UnixStream::connect(SERVER_PATH)?;
 
     println!("Ctrl-C to quit");
 
@@ -53,13 +57,13 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     while keep_looping.load(atomic::Ordering::SeqCst) {
         // Currently we just have stdin but we will add the Veth socket
-        // In the implementation of poll_actions we are expecting stdin in
+        // In the implementation of poll_once we are expecting stdin in
         // first place (and next Veth that is not yet available).
         let mut pollfds = [PollFd::new(stdin_fd, PollFlags::POLLIN)];
 
-        match poll_actions(&mut pollfds) {
-            PollAction::Continue | PollAction::ReachTimeout => continue,
-            PollAction::ReadStdin => {
+        match poll_once(&mut pollfds) {
+            PollAction::Ignore | PollAction::TimedOut => continue,
+            PollAction::StdinReady => {
                 let mut input = String::new();
                 io::stdin().read_line(&mut input)?;
 
@@ -71,7 +75,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 print!("> ");
                 io::stdout().flush()?;
             }
-            PollAction::GotSignal => {
+            PollAction::Interrupted => {
                 // poll() returns EINTR for any signal, not just SIGINT so we need to check
                 if keep_looping.load(atomic::Ordering::SeqCst) {
                     // It wasn't SIGINT (otherwise keep_looping is false) so keep looping
@@ -86,24 +90,24 @@ fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn poll_actions(mut fds: &mut [PollFd]) -> PollAction {
+fn poll_once(fds: &mut [PollFd]) -> PollAction {
     // Retry poll if interruped by signal EINTR. Without this we have:
     //  | thread 'main' (60079) panicked at src/main.rs:41:68:
     //  | called `Result::unwrap()` on an `Err` value: EINTR
     //  | note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
-    match poll(&mut fds, PollTimeout::from(100u16)) {
-        Ok(0) => PollAction::ReachTimeout,
+    match poll(fds, PollTimeout::from(100u16)) {
+        Ok(0) => PollAction::TimedOut,
         Ok(_) => {
             if fds[0]
                 .revents()
                 .is_some_and(|f| f.contains(PollFlags::POLLIN))
             {
-                PollAction::ReadStdin
+                PollAction::StdinReady
             } else {
-                PollAction::Continue
+                PollAction::Ignore
             }
         } // nothing to do, fds are checked right after the match
-        Err(nix::errno::Errno::EINTR) => PollAction::GotSignal,
+        Err(nix::errno::Errno::EINTR) => PollAction::Interrupted,
         Err(e) => panic!("poll failed: {}", e),
     }
 }
@@ -125,5 +129,5 @@ fn send_message(sock: &mut UnixStream, msg: &str) -> io::Result<String> {
     // Read the message
     let mut buf = vec![0u8; len];
     sock.read_exact(&mut buf)?;
-    Ok(String::from_utf8(buf).unwrap_or_default())
+    String::from_utf8(buf).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
 }
