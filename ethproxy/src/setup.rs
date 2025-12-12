@@ -54,6 +54,10 @@ impl Veth {
         }
     }
 
+    pub fn destroy_device(&self) {
+        let _ = run_cmd("ip", &["link", "del", &self.name], 0);
+    }
+
     pub fn create_device(&self) {
         // man 4 veth
         // We need to run: ip link add <name> type veth peer name <peer>
@@ -84,7 +88,7 @@ impl Veth {
         }
     }
 
-    pub fn destroy_device(&self) {
-        let _ = run_cmd("ip", &["link", "del", &self.name], 0);
+    pub fn peer(&self) -> &str {
+        &self.peer
     }
 }

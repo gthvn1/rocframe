@@ -5,4 +5,5 @@ edition = "2024"
 
 [dependencies]
 ctrlc = "3.5.1"
-nix = {version = "0.30.1", features = ["poll"]}
+libc = "0.2.178"
+nix = {version = "0.30.1", features = ["poll", "net", "socket"]}

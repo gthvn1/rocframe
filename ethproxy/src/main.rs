@@ -1,12 +1,12 @@
 use std::error::Error;
 use std::io::{self, Read, Write};
-use std::os::fd::AsFd;
+use std::os::fd::{AsFd, AsRawFd, OwnedFd};
 use std::os::unix::net::UnixStream;
 use std::sync::{Arc, atomic};
 
 use nix::poll::{PollFd, PollFlags, PollTimeout, poll};
 
-use ethproxy::setup;
+use ethproxy::setup::Veth;
 
 // TODO: pass this as parameters of client binary
 const VETH_NAME: &str = "veth0";
@@ -16,6 +16,7 @@ const SERVER_PATH: &str = "/tmp/frameforge.sock";
 enum PollAction {
     TimedOut,
     StdinReady,
+    VethReady,
     Interrupted,
     Ignore,
 }
@@ -37,8 +38,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     // ----- Prepare the low level network: creation of Veth
-    let veth = setup::Veth::init(VETH_NAME, VETH_IP);
+    let veth = Veth::init(VETH_NAME, VETH_IP);
     veth.create_device();
+
+    let _veth_fd = open_veth_peer_socket(&veth)?;
 
     // ----- Setup file description for stdin: used by poll
     // We declare the fd here to live during the whole loop. It is a little
@@ -65,6 +68,10 @@ fn main() -> Result<(), Box<dyn Error>> {
 
         match poll_once(&mut pollfds) {
             PollAction::Ignore | PollAction::TimedOut => continue,
+            PollAction::VethReady => {
+                veth.destroy_device();
+                panic!("todo: send frame to server");
+            }
             PollAction::StdinReady => {
                 let mut input = String::new();
                 io::stdin().read_line(&mut input)?;
@@ -94,6 +101,43 @@ fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+fn open_veth_peer_socket(veth: &Veth) -> io::Result<OwnedFd> {
+    use libc;
+    use nix::net::if_;
+    use nix::sys::socket;
+    use nix::sys::socket::SockaddrLike; // needed by from_raw
+
+    let ifindex = if_::if_nametoindex(veth.peer())?;
+
+    let peer_fd = socket::socket(
+        socket::AddressFamily::Packet,
+        socket::SockType::Raw,
+        socket::SockFlag::empty(),
+        socket::SockProtocol::EthAll,
+    )?;
+
+    // bind interface. We need libc for socaddr ll (low level)
+    let sll = libc::sockaddr_ll {
+        sll_family: libc::AF_PACKET as u16,
+        sll_protocol: socket::SockProtocol::EthAll as u16,
+        sll_ifindex: ifindex as i32,
+        sll_hatype: 0,
+        sll_pkttype: 0,
+        sll_halen: 0,
+        sll_addr: [0; 8],
+    };
+
+    let sll_len = std::mem::size_of::<libc::sockaddr_ll>() as libc::socklen_t;
+
+    let peer_addr = unsafe {
+        socket::LinkAddr::from_raw(&sll as *const _ as *const libc::sockaddr, Some(sll_len))
+    }
+    .ok_or_else(|| io::Error::other("Failed to create LinkAddr"))?;
+
+    socket::bind(peer_fd.as_raw_fd(), &peer_addr)?;
+    Ok(peer_fd)
+}
+
 fn poll_once(fds: &mut [PollFd]) -> PollAction {
     // Retry poll if interruped by signal EINTR. Without this we have:
     //  | thread 'main' (60079) panicked at src/main.rs:41:68:
@@ -107,6 +151,11 @@ fn poll_once(fds: &mut [PollFd]) -> PollAction {
                 .is_some_and(|f| f.contains(PollFlags::POLLIN))
             {
                 PollAction::StdinReady
+            } else if fds[1]
+                .revents()
+                .is_some_and(|f| f.contains(PollFlags::POLLIN))
+            {
+                PollAction::VethReady
             } else {
                 PollAction::Ignore
             }
