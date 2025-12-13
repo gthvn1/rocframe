@@ -29,13 +29,6 @@ clean:
     @echo 'Cleaning server'
     cd frameforge && dune clean
 
-# Set up Veth pair and start a shell.
-setup-network:
-    @echo 'Setting network using {{net_iface}} {{peer_iface}} {{cidr}}'
-    @echo 'Use a terminal mux to run proxy and server in this env'
-    ./scripts/netns.sh {{net_iface}} {{peer_iface}} {{cidr}}
-    @echo 'Cleanup env'
-
 # Start the proxy. Must be run in a shell started with setup-net
 proxy:
     # Because we quit using ctrl-c, we prefix the rule with "-"
@@ -47,8 +40,15 @@ proxy:
 server:
     -sh -c 'exec ./frameforge/_build/default/bin/main.exe `ip -j a` {{socket}}'
 
+# Set up Veth pair and start a shell.
+netns-shell:
+    @echo 'Setting network using {{net_iface}} {{peer_iface}} {{cidr}}'
+    @echo 'Use a terminal mux to run proxy and server in this env'
+    cd scripts && ./netns_shell.sh {{net_iface}} {{peer_iface}} {{cidr}}
+    @echo 'Cleanup env'
+
 # Run the whole workflow in tmux
-run-in-tmux:
+netns-tmux:
     @echo 'Starting tmux session inside network namespace...'
-    ./scripts/run_in_tmux.sh {{net_iface}} {{peer_iface}} {{cidr}} {{socket}}
+    cd scripts && ./netns_tmux.sh {{net_iface}} {{peer_iface}} {{cidr}} {{socket}}
     @echo 'Cleanup env'

@@ -34,7 +34,7 @@ From the repository root: `just clean`
 ## Setting up the network
 
 The project uses a veth pair inside a network namespace for testing.
-Use the **setup-network** recipe to create the namespace and start an interactive shell inside it: `just setup-network`
+Use the **netns-shell** recipe to create the namespace and start an interactive shell inside it: `just netns-shell`
 
 - This will create a veth pair:
   - net interface (default: veth0)
@@ -47,7 +47,7 @@ All commands run inside this shell inherit the network namespace.
 
 ## Running
 
-After `just setup-network`, you can start the server and proxy in separate terminal panes or shells.
+After `just netns-shell`, you can start the server and proxy in separate terminal panes or shells.
 
 - Start the server: `just server`
   - The OCaml server listens on a Unix socket (default: /tmp/frameforge.sock)
@@ -59,20 +59,24 @@ After `just setup-network`, you can start the server and proxy in separate termi
   - Also listens for user input
   - Press Ctrl-C to stop it cleanly
 
-Ensure the proxy and server are run inside the namespace shell created by `setup-network`.
+Ensure the proxy and server are run inside the namespace shell created by `netns-shell`.
+
+You can also, it you have **tmux** run everything with one command: `just netns-tmux`
 
 ## Justfile Recipes Summary
 
 ```sh
-$ just
-default           # List all available recipes (just --list)
-build             # Build both server and proxy
-build-proxy       # Build only the Rust proxy
-build-server      # Build only the OCaml server
-clean             # Clean the build of proxy and server
-setup-network     # Set up veth pair and start a shell in the network namespace
-proxy             # Start the Rust proxy inside the namespace
-server            # Start the OCaml server inside the namespace
+❯ just -l
+Available recipes:
+    build        # Build the proxy and the server
+    build-proxy  # Build the proxy
+    build-server # Build the server
+    clean        # Clean the build of proxy and server
+    default      # List recipes
+    netns-shell  # Set up Veth pair and start a shell.
+    netns-tmux   # Run the whole workflow in tmux
+    proxy        # Start the proxy. Must be run in a shell started with setup-net
+    server       # Start server. Must be run in a shell started using setup-net
 ```
 
 The server and client run separately.
