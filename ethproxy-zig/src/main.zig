@@ -1,6 +1,13 @@
 const std = @import("std");
 const a = @import("args.zig");
 
+var quit_loop = std.atomic.Value(bool).init(false);
+
+fn handleSigInt(sig_num: c_int) callconv(.c) void {
+    _ = sig_num;
+    quit_loop.store(true, .monotonic);
+}
+
 pub fn main() !void {
     const args = a.ReadArgs() orelse {
         std.debug.print("Usage: ethproxy <peer_iface> <socket>\n", .{});
@@ -9,6 +16,14 @@ pub fn main() !void {
 
     std.debug.print("Peer Interface: {s}\n", .{args.peer_iface});
     std.debug.print("Socket: {s}\n", .{args.socket});
+
+    // Change the ctrl-c action
+    const action = std.posix.Sigaction{
+        .flags = 0,
+        .handler = .{ .handler = handleSigInt },
+        .mask = std.posix.sigemptyset(),
+    };
+    std.posix.sigaction(std.posix.SIG.INT, &action, null);
 
     // Read user input
     var buffer: [1024]u8 = undefined;
@@ -23,6 +38,11 @@ pub fn main() !void {
         stdin.toss(1);
 
         std.debug.print("You write <{s}>\n", .{r});
+        // Should we continue
+        if (quit_loop.load(.monotonic)) {
+            std.debug.print("bye", .{});
+            break;
+        }
         std.debug.print("> ", .{});
     } else |_| {
         std.debug.print("end", .{});
