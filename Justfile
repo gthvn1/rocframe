@@ -46,3 +46,9 @@ proxy:
 # Start server. Must be run in a shell started using setup-net
 server:
     -sh -c 'exec ./frameforge/_build/default/bin/main.exe `ip -j a` {{socket}}'
+
+# Run the whole workflow in tmux
+run-in-tmux:
+    @echo 'Starting tmux session inside network namespace...'
+    ./scripts/run_in_tmux.sh {{net_iface}} {{peer_iface}} {{cidr}} {{socket}}
+    @echo 'Cleanup env'
