@@ -24,7 +24,7 @@ Install them via your system package manager or preferred toolchain.
 From the repository root, using Just:
 - Build everything: `just build`
 - Build only the Rust client (ethproxy): `just build-proxy`
-- Build only the OCaml server (frameforge: `just build-server`
+- Build only the OCaml server (frameforge): `just build-server`
 
 The Justfile uses directory switching internally to build in the correct directories.
 
@@ -35,7 +35,7 @@ From the repository root: `just clean`
 ## Setting up the network
 
 The project uses a veth pair inside a network namespace for testing.
-Use the **setup-net** recipe to create the namespace and start an interactive shell inside it: `just setup-net`
+Use the **setup-network** recipe to create the namespace and start an interactive shell inside it: `just setup-network`
 
 - This will create a veth pair:
   - net interface (default: veth0)
@@ -48,7 +48,7 @@ All commands run inside this shell inherit the network namespace.
 
 ## Running
 
-After `just setup-net`, you can start the server and proxy in separate terminal panes or shells.
+After `just setup-network`, you can start the server and proxy in separate terminal panes or shells.
 
 - Start the server: `just server`
   - The OCaml server listens on a Unix socket (default: /tmp/frameforge.sock)
@@ -60,20 +60,20 @@ After `just setup-net`, you can start the server and proxy in separate terminal 
   - Also listens for user input
   - Press Ctrl-C to stop it cleanly
 
-Ensure the proxy and server are run inside the namespace shell created by `setup-net`.
+Ensure the proxy and server are run inside the namespace shell created by `setup-network`.
 
 ## Justfile Recipes Summary
 
 ```sh
 $ just
-default       # List all available recipes (just --list)
-build         # Build both server and proxy
-build-proxy   # Build only the Rust proxy
-build-server  # Build only the OCaml server
-clean         # Clean the build of proxy and server
-setup-net     # Set up veth pair and start a shell in the network namespace
-proxy         # Start the Rust proxy inside the namespace
-server        # Start the OCaml server inside the namespace
+default           # List all available recipes (just --list)
+build             # Build both server and proxy
+build-proxy       # Build only the Rust proxy
+build-server      # Build only the OCaml server
+clean             # Clean the build of proxy and server
+setup-network     # Set up veth pair and start a shell in the network namespace
+proxy             # Start the Rust proxy inside the namespace
+server            # Start the OCaml server inside the namespace
 ```
 
 The server and client run separately.
@@ -87,7 +87,7 @@ The server and client run separately.
 net_iface := "veth0"
 peer_iface := net_iface + "-peer"
 cidr := "192.168.35.2/24"
-socket := "/tmp/rocframe.sock"
+socket := "/tmp/frameforge.sock"
 ```
 
 - Use a terminal multiplexer to run server and proxy simultaneously for testing.

@@ -30,7 +30,7 @@ clean:
     cd frameforge && dune clean
 
 # Set up Veth pair and start a shell.
-setup-net:
+setup-network:
     @echo 'Setting network using {{net_iface}} {{peer_iface}} {{cidr}}'
     @echo 'Use a terminal mux to run proxy and server in this env'
     ./scripts/netns.sh {{net_iface}} {{peer_iface}} {{cidr}}
