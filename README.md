@@ -2,12 +2,11 @@
 
 **R**ust handles low-level packet I/O, **OC**aml decodes **frame** and responds...
 
-This project contains two components:
+This project contains three components:
 
-- **frameforge** — OCaml server (built with Dune)
-- **ethproxy** — Rust client (built with Cargo)
-
-Both are independent programs but live in the same project directory.
+- **network script** - Shell script to create Veth pair and setup IP (Posix Shell)
+- **frameforge** - OCaml server to decode frame and protocol logic (built with Dune)
+- **ethproxy** - Rust proxy to forward data to server (built with Cargo)
 
 ## Requirements
 
