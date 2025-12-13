@@ -116,18 +116,21 @@ let handle (payload : bytes) : bytes =
   |> String.concat " " |> print_endline;
 
   (* ----- Parsing *)
-  let () =
-    match frame_parser payload 0 with
-    | Error _e -> Printf.printf "Failed to parse frame header\n"
-    | Ok (h, _payload_off) ->
-        let open Utils in
-        let open String in
-        let dst_str = hex_of_bytes h.dst_mac |> concat ":" in
-        let src_str = hex_of_bytes h.src_mac |> concat ":" in
-        Printf.printf "Destination MAC: %s\n" dst_str;
-        Printf.printf "Source MAC     : %s\n" src_str;
-        Printf.printf "Ethernet type  : %s\n" (Ethertype.to_string h.ethertype);
-        Printf.printf "-------------------------------------\n"
-  in
-  (* ----- Return a dummy message *)
-  Bytes.of_string "TODO: parse ethernet frame\n"
+  match frame_parser payload 0 with
+  | Error _e ->
+      Printf.printf "Failed to parse frame header\n";
+      Bytes.of_string "ERROR: failed to parse ethernet header\n"
+  | Ok (h, offset) -> (
+      let open Utils in
+      let dst_str = hex_of_bytes h.dst_mac |> String.concat ":" in
+      let src_str = hex_of_bytes h.src_mac |> String.concat ":" in
+      Printf.printf "Destination MAC: %s\n" dst_str;
+      Printf.printf "Source MAC     : %s\n" src_str;
+      Printf.printf "Ethernet type  : %s\n" (Ethertype.to_string h.ethertype);
+      Printf.printf "-------------------------------------\n";
+      match h.ethertype with
+      | Ether_ipv4 -> Bytes.of_string "TODO: parse IPv4"
+      | Ether_ipv6 -> Bytes.of_string "TODO: IPv6"
+      | Ether_arp -> Arp_handler.handle payload offset
+      | Ether_unknown x ->
+          Bytes.of_string @@ Printf.sprintf "TODO: parse unknown (0x%2X)" x)
