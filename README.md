@@ -6,7 +6,7 @@ This project contains three components:
 
 - **network script** - Shell script to create Veth pair and setup IP (Posix Shell)
 - **frameforge** - OCaml server to decode frame and protocol logic (built with Dune)
-- **ethproxy** - Rust proxy to forward data to server (built with Cargo)
+- **ethproxy** - Rust proxy to forward data to server (built with Cargo), a Zig replacement is in progress...
 
 ## Requirements
 
