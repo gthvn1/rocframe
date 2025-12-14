@@ -130,7 +130,7 @@ let handle (payload : bytes) : bytes =
       Printf.printf "-------------------------------------\n";
       match h.ethertype with
       | Ether_ipv4 -> Bytes.of_string "TODO: parse IPv4"
-      | Ether_ipv6 -> Bytes.of_string "TODO: IPv6"
+      | Ether_ipv6 -> Bytes.of_string "TODO: parse IPv6"
       | Ether_arp -> Arp_handler.handle payload offset
       | Ether_unknown x ->
           Bytes.of_string @@ Printf.sprintf "TODO: parse unknown (0x%2X)" x)
