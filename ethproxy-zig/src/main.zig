@@ -76,21 +76,28 @@ pub fn main() !void {
                     const response = try server.read(allocator);
                     defer allocator.free(response);
                     std.debug.print("Response: {s}\n", .{response});
-
-                    // Print a new prompt
-                    std.debug.print("> ", .{});
                 } else |_| {
                     std.debug.print("end\n", .{});
                     std.process.exit(1);
                 }
             },
             .veth_ready => {
-                std.debug.print("You've got a frame on VETH\n", .{});
+                var buf: [2048]u8 = undefined;
+                const n = posix.recv(veth.fd, &buf, 0) catch |e| {
+                    std.debug.print("recv error: {s}\n", .{@errorName(e)});
+                    // Print a new prompt
+                    std.debug.print("> ", .{});
+                    continue;
+                };
+                std.debug.print("Got frame: {d} bytes\n", .{n});
             },
             .unknown => {
                 std.debug.print("What happens?\n", .{});
             },
         }
+
+        // Print a new prompt
+        std.debug.print("> ", .{});
     }
 
     std.debug.print("bye\n", .{});

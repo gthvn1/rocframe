@@ -10,7 +10,8 @@ pub const Veth = struct {
 
     pub fn init(name: [:0]const u8) !Veth {
         // man 7 packet
-        const veth_fd = try posix.socket(posix.AF.PACKET, posix.SOCK.RAW, 0);
+        const protocol = std.mem.nativeToBig(u16, std.os.linux.ETH.P.ALL);
+        const veth_fd = try posix.socket(posix.AF.PACKET, posix.SOCK.RAW, protocol);
 
         const idx = std.c.if_nametoindex(name);
         if (idx == 0) return error.InterfaceNotFound;
@@ -19,10 +20,10 @@ pub const Veth = struct {
 
         const veth_addr = posix.sockaddr.ll{
             .family = posix.AF.PACKET,
-            .protocol = std.os.linux.ETH.P.ALL,
+            .protocol = protocol,
             .ifindex = idx,
             .hatype = 0,
-            .pkttype = std.os.linux.PACKET.BROADCAST, // TODO: check if 0 is ok
+            .pkttype = 0,
             .halen = 0,
             .addr = [_]u8{0} ** 8,
         };
