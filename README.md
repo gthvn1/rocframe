@@ -1,6 +1,6 @@
-# Rocframe
+# Pocframe
 
-**R**ust handles low-level packet I/O, **OC**aml decodes **frame** and responds...
+**P**roxy handles low-level packet I/O, **OC**aml decodes **frame** and responds...
 
 This project contains three components:
 
