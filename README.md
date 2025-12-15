@@ -9,7 +9,7 @@ This project contains three components:
 - **ethproxy** - Rust or Zig proxy to forward data to server
 
 We used Rust and Zig to compare how it feels to program in these two languages. We initially
-planned to use C for packet handling, but we wanted to try some newer, cooler languages.
+planned to use C for packet handling, but we wanted to try some newer languages.
 
 ## Requirements
 
