@@ -95,7 +95,20 @@ socket := "/tmp/frameforge.sock"
 
 - Use a terminal multiplexer to run server and proxy simultaneously for testing.
 
----
+## Debug tips
+
+- We can inspect exchange between the client and the serve using sockat:
+  - Start the server
+  - Modified the client to connect to /tmp/frameforge-proxy.socket
+  - Create a proxy with socat
+```sh
+socat -v UNIX-LISTEN:/tmp/frameforge-proxy.sock,fork \
+         UNIX-CONNECT:/tmp/frameforge.sock \
+  | tee /tmp/frameforge.log
+```
+  - We are able to see messages that are exchanged
+  - We will able to see the issue where data size is too big on the ethproxy
+    side.
 
 ## Screenshot
 
