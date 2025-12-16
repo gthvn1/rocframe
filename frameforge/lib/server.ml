@@ -54,7 +54,9 @@ let handle_client fd =
   in
   aux ()
 
-let run socket_path =
+let run ~socket_path ~veth_name ~veth_mac =
+  let _ = veth_name in
+  let _ = veth_mac in
   (* Add the signal handler to cleanly shutdown the server *)
   Sys.(set_signal sigint (Signal_handle (fun _ -> ())));
   let open Unix in
